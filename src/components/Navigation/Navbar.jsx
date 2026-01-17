@@ -16,7 +16,7 @@ const mainNavigation = [
   { name: 'Blog', href: '#', current: false, hasSubmenu: true, icon: <FaBook className="text-blue-600" /> },
   { name: 'Comunidad', href: '#', current: false, hasSubmenu: true, icon: <FaUsers className="text-blue-600" /> },
   { name: 'Proyectos', href: '#', current: false, hasSubmenu: true, icon: <FaBriefcase className="text-purple-600" /> },
-  { name: 'Contacto', href: '/contacto', current: false, icon: <FaEnvelope className="text-blue-600" /> },
+  { name: 'Proyectos', href: '#', current: false, hasSubmenu: true, icon: <FaBriefcase className="text-purple-600" /> },
 ];
 
 const serviceSubmenu = [
