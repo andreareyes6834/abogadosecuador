@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "start:worker": "wrangler dev --port 3000",
     "deploy:worker": "wrangler deploy",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler pages deploy dist",
     "clean": "rimraf node_modules dist .turbo",
     "generate-lockfile": "npm install --package-lock-only",
     "tail-logs": "wrangler tail",
