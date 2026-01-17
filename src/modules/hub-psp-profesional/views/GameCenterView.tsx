@@ -42,7 +42,7 @@ export const GameCenterView: React.FC<GameCenterViewProps> = ({ onPlayGame }) =>
             <ChevronLeft size={40} className="group-hover:-translate-x-1 transition-transform" />
           </button>
         </div>
-        
+
         <div className="flex items-center gap-12 overflow-visible px-20 perspective-1000 h-full">
           {MOCK_GAMES.map((game, index) => {
             const isActive = index === activeIndex;
@@ -55,15 +55,15 @@ export const GameCenterView: React.FC<GameCenterViewProps> = ({ onPlayGame }) =>
             if (isNext) styles = "transition-all duration-700 transform scale-90 opacity-40 z-10 blur-none rotate-y-12 -translate-x-10";
 
             return (
-              <div 
-                key={game.id} 
+              <div
+                key={game.id}
                 className={`glass-panel w-[480px] rounded-[60px] overflow-hidden border border-white/10 flex-shrink-0 relative ${styles}`}
               >
                 {/* Game Banner */}
                 <div className="relative h-64 overflow-hidden">
                   <img src={game.image} className="w-full h-full object-cover" alt={game.title} />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E14] via-transparent to-transparent" />
-                  
+
                   {/* Floating Badges */}
                   <div className="absolute top-8 left-8 flex flex-col gap-3">
                     {game.isPremium && (
@@ -76,7 +76,7 @@ export const GameCenterView: React.FC<GameCenterViewProps> = ({ onPlayGame }) =>
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Game Info Body */}
                 <div className="p-10 space-y-8 bg-gradient-to-b from-transparent to-black/40">
                   <div className="flex justify-between items-start">
@@ -91,7 +91,7 @@ export const GameCenterView: React.FC<GameCenterViewProps> = ({ onPlayGame }) =>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-10">
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Volatility</span>
@@ -106,7 +106,7 @@ export const GameCenterView: React.FC<GameCenterViewProps> = ({ onPlayGame }) =>
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => isActive && onPlayGame(game)}
                     className="w-full py-6 bg-white text-[#0B0E14] font-orbitron font-black rounded-[28px] flex items-center justify-center gap-4 shadow-[0_20px_40px_rgba(255,255,255,0.1)] transition-all transform active:scale-95 text-lg group-hover:bg-cyan-400"
                   >

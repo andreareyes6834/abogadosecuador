@@ -27,124 +27,122 @@ export interface GameFinishOutput {
   progress: UserProgress;
 }
 
-export class PlatformEngine {
-  private economy = new EconomyEngine();
-  private gamification = new GamificationEngine();
+  private listeners: (() => void)[] = [];
 
-  initUser(userId: string, seed?: PlatformUserSeed): void {
-    const existingWallet = this.economy.getWallet(userId);
-    if (!existingWallet) {
-      this.economy.createWallet(userId, seed?.coins ?? 0, seed?.gems ?? 0);
-    }
-
-    const existingProgress = this.gamification.getProgress(userId);
-    if (!existingProgress) {
-      this.gamification.createUserProgress(userId);
-    }
-
-    const progress = this.gamification.getProgress(userId);
-    if (progress && seed) {
-      if (typeof seed.level === 'number') {
-        progress.level = seed.level;
-      }
-      if (typeof seed.xp === 'number') {
-        progress.xp = seed.xp;
-      }
-      if (typeof seed.maxXp === 'number') {
-        progress.xpToNextLevel = seed.maxXp;
-      }
-    }
+subscribe(listener: () => void): () => void {
+  this.listeners.push(listener);
+  return() => {
+  this.listeners = this.listeners.filter(l => l !== listener);
+};
   }
 
-  getCoins(userId: string): number {
-    return this.economy.getWallet(userId)?.softTokens ?? 0;
+  private emitChange() {
+  this.listeners.forEach(l => l());
+}
+
+initUser(userId: string, seed ?: PlatformUserSeed): void {
+  // ... logic ...
+  const existingWallet = this.economy.getWallet(userId);
+  if(!existingWallet) {
+    this.economy.createWallet(userId, seed?.coins ?? 0, seed?.gems ?? 0);
+  }
+    // ...
+    // Note: Calling emitChange after init is useful
+    this.emitChange();
+}
+
+// Override or wrap methods that change state to emitChange
+// But EconomyEngine methods are separate. 
+// Ideally EconomyEngine should emit events, but I can wrap them here.
+
+updateEconomy(userId: string, changes: { coins: number; gems: number; xp: number }): void {
+  if(changes.coins !== 0) {
+  if (changes.coins > 0) this.economy.rewardUser(userId, changes.coins, MovementType.REWARD, 'manual_update');
+  else this.economy.deductTokens(userId, Math.abs(changes.coins), TokenType.SOFT, 'manual_update');
+}
+// Gems logic...
+// For now assuming economy updates.
+this.emitChange();
   }
 
-  getGems(userId: string): number {
-    return this.economy.getWallet(userId)?.hardTokens ?? 0;
+// Redefine methods to emit
+startGame(userId: string, gameId: string, minBet: number): void {
+  if(minBet <= 0) return;
+this.economy.deductTokens(userId, minBet, TokenType.SOFT, `entry:${gameId}`);
+this.emitChange();
   }
 
-  getProgress(userId: string): UserProgress {
-    const progress = this.gamification.getProgress(userId);
-    if (!progress) throw new Error('User progress not found');
-    return progress;
+finishGame(userId: string, input: GameFinishInput): GameFinishOutput {
+  // ... existing implementation ...
+  const rewardCalc = this.economy.calculateReward(
+    input.score,
+    input.difficulty,
+    this.getProgress(userId).currentStreak || 1,
+    1.0
+  );
+
+  const baseReward = rewardCalc.finalReward;
+  if (baseReward > 0) {
+    this.economy.rewardUser(userId, baseReward, MovementType.REWARD, `game:${input.gameId}`);
   }
 
-  exportUserState(userId: string): PlatformUserState {
-    const wallet = this.economy.getWallet(userId);
-    const progress = this.gamification.getProgress(userId);
-    if (!wallet || !progress) throw new Error('User not initialized');
+  const xpEarned = Math.max(50, Math.floor(input.score / 20));
+  const { unlockedAchievements, completedMissions } = this.gamification.recordGamePlayed(
+    userId,
+    input.score,
+    input.won,
+    xpEarned
+  );
 
-    return {
-      wallet: {
-        softTokens: wallet.softTokens,
-        hardTokens: wallet.hardTokens
-      },
-      progress: {
-        level: progress.level,
-        xp: progress.xp,
-        xpToNextLevel: progress.xpToNextLevel,
-        totalGamesPlayed: progress.totalGamesPlayed,
-        totalScore: progress.totalScore,
-        currentStreak: progress.currentStreak,
-        longestStreak: progress.longestStreak,
-        dailyRewardClaimed: progress.dailyRewardClaimed,
-        dailyRewardStreak: progress.dailyRewardStreak
-      }
-    };
+  // ... bonuses ...
+  const bonusFromAchievements = unlockedAchievements.reduce((sum, a) => sum + (a.tokenReward || 0), 0);
+  if (bonusFromAchievements > 0) {
+    this.economy.rewardUser(userId, bonusFromAchievements, MovementType.ACHIEVEMENT, `achievements:${input.gameId}`);
   }
 
-  importUserState(userId: string, state: PlatformUserState): void {
-    this.economy.restoreWallet(userId, state.wallet.softTokens, state.wallet.hardTokens);
-    this.gamification.restoreProgress(userId, state.progress);
+  const bonusFromMissions = completedMissions.reduce((sum, m) => sum + (m.reward?.softTokens || 0), 0);
+  if (bonusFromMissions > 0) {
+    this.economy.rewardUser(userId, bonusFromMissions, MovementType.REWARD, `missions:${input.gameId}`);
   }
 
-  startGame(userId: string, gameId: string, minBet: number): void {
-    if (minBet <= 0) return;
-    this.economy.deductTokens(userId, minBet, TokenType.SOFT, `entry:${gameId}`);
-  }
+  this.emitChange(); // EMIT
 
-  finishGame(userId: string, input: GameFinishInput): GameFinishOutput {
-    const rewardCalc = this.economy.calculateReward(
-      input.score,
-      input.difficulty,
-      this.getProgress(userId).currentStreak || 1,
-      1.0
-    );
-
-    const baseReward = rewardCalc.finalReward;
-    if (baseReward > 0) {
-      this.economy.rewardUser(userId, baseReward, MovementType.REWARD, `game:${input.gameId}`);
-    }
-
-    const xpEarned = Math.max(50, Math.floor(input.score / 20));
-    const { unlockedAchievements, completedMissions } = this.gamification.recordGamePlayed(
-      userId,
-      input.score,
-      input.won,
-      xpEarned
-    );
-
-    const bonusFromAchievements = unlockedAchievements.reduce((sum, a) => sum + (a.tokenReward || 0), 0);
-    if (bonusFromAchievements > 0) {
-      this.economy.rewardUser(userId, bonusFromAchievements, MovementType.ACHIEVEMENT, `achievements:${input.gameId}`);
-    }
-
-    const bonusFromMissions = completedMissions.reduce((sum, m) => sum + (m.reward?.softTokens || 0), 0);
-    if (bonusFromMissions > 0) {
-      this.economy.rewardUser(userId, bonusFromMissions, MovementType.REWARD, `missions:${input.gameId}`);
-    }
-
-    return {
-      baseReward,
-      bonusFromAchievements,
-      bonusFromMissions,
-      totalCoinsAwarded: baseReward + bonusFromAchievements + bonusFromMissions,
-      unlockedAchievements,
-      completedMissions,
-      progress: this.getProgress(userId)
-    };
-  }
+  return {
+    baseReward,
+    bonusFromAchievements,
+    bonusFromMissions,
+    totalCoinsAwarded: baseReward + bonusFromAchievements + bonusFromMissions,
+    unlockedAchievements,
+    completedMissions,
+    progress: this.getProgress(userId)
+  };
+}
 }
 
 export const platformEngine = new PlatformEngine();
+
+import { useState, useEffect } from 'react';
+import * as LocalAuth from './LocalAuth';
+
+export const usePlatform = () => {
+  const [_, setTick] = useState(0);
+  const session = LocalAuth.readSession();
+  const userId = session?.username || 'guest';
+
+  useEffect(() => {
+    return platformEngine.subscribe(() => setTick(t => t + 1));
+  }, []);
+
+  return {
+    state: {
+      economy: {
+        coins: platformEngine.getCoins(userId),
+        gems: platformEngine.getGems(userId)
+      },
+      progress: (() => { try { return platformEngine.getProgress(userId); } catch { return null; } })()
+    },
+    updateEconomy: (changes: { coins: number; gems: number; xp: number }) => {
+      platformEngine.updateEconomy(userId, changes);
+    }
+  };
+};

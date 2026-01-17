@@ -1,5 +1,7 @@
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, lazy } from 'react';
+// Lazy load casino games
+const BlackjackGame = lazy(() => import('../games/casino/BlackjackGame'));
 /* Added Gamepad2 and Trophy to the imports from lucide-react */
 import { X, Maximize, Settings, Pause, Play, RotateCcw, Coins, ShieldCheck, Gem, Gamepad2, Trophy } from 'lucide-react';
 import { Game, GameState } from '../types';
@@ -240,6 +242,23 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
     return null;
   };
 
+  // Special bypass for Casino Games
+  if (game.id === 'blackjack') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-[#0B0E14] flex flex-col items-center justify-center p-4">
+        <button
+          onClick={onExit}
+          className="absolute top-8 left-8 p-4 bg-white/10 rounded-full hover:bg-white/20 text-white z-50 flex items-center gap-2"
+        >
+          <X /> SALIR
+        </button>
+        <React.Suspense fallback={<div>Cargando Casino...</div>}>
+          <BlackjackGame />
+        </React.Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-[#0B0E14]/95 backdrop-blur-3xl flex flex-col p-8 animate-in fade-in zoom-in duration-500">
       {/* VIP Shell Header */}
@@ -283,7 +302,7 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
       {/* Luxury Game Surface */}
       <div className="flex-1 glass-panel rounded-[60px] border border-white/10 relative overflow-hidden flex items-center justify-center bg-[#0B0E14]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,246,255,0.05),_transparent_70%)]" />
-        
+
         {gameState === 'LOADING' && (
           <div className="text-center space-y-8 animate-in fade-in duration-1000">
             <div className="relative">
@@ -306,7 +325,7 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
               <h3 className="text-7xl font-orbitron font-black text-white uppercase tracking-tighter leading-none">BIENVENIDO AL <br /> <span className="text-cyan-400">LOUNGE VIP</span></h3>
               <p className="text-slate-400 text-lg font-light leading-relaxed">Su sesión ha sido autenticada bajo el protocolo Wilson Ipiales. Se aplicarán tasas de retorno Supreme por ser Miembro Premium.</p>
             </div>
-            <button 
+            <button
               onClick={start}
               className="px-20 py-8 bg-white text-[#0B0E14] font-orbitron font-black text-2xl rounded-[32px] shadow-[0_30px_60px_rgba(255,255,255,0.2)] transition-all transform hover:scale-105 active:scale-95"
             >
@@ -349,14 +368,14 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
           <div className="text-center space-y-12 animate-in zoom-in-95 duration-700 relative z-10 px-10">
             <div className="space-y-4">
               <div className="flex justify-center mb-8">
-                 <div className="p-10 bg-yellow-500/10 rounded-[50px] border border-yellow-500/20 shadow-[0_0_80px_rgba(234,179,8,0.2)]">
-                   <Trophy size={100} className="text-yellow-500 animate-bounce" />
-                 </div>
+                <div className="p-10 bg-yellow-500/10 rounded-[50px] border border-yellow-500/20 shadow-[0_0_80px_rgba(234,179,8,0.2)]">
+                  <Trophy size={100} className="text-yellow-500 animate-bounce" />
+                </div>
               </div>
               <h3 className="text-8xl font-orbitron font-black text-white uppercase tracking-tighter">¡EL BANCO PAGA!</h3>
               <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-sm">Sesión Finalizada • Retorno Procesado</p>
             </div>
-            
+
             <div className="glass-panel py-10 px-20 rounded-[40px] border border-white/10 inline-block bg-gradient-to-br from-yellow-500/10 to-transparent">
               <div className="text-slate-400 uppercase font-black tracking-[0.3em] text-[10px] mb-4">Score Final</div>
               <div className="text-8xl font-orbitron font-black text-yellow-500 flex items-center justify-center gap-8">
@@ -365,7 +384,7 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
             </div>
 
             <div className="flex justify-center pt-8">
-              <button 
+              <button
                 onClick={onExit}
                 className="px-20 py-8 bg-white text-[#0B0E14] font-orbitron font-black text-2xl rounded-[32px] hover:bg-cyan-400 hover:scale-105 transition-all shadow-[0_30px_60px_rgba(255,255,255,0.1)]"
               >
@@ -378,25 +397,25 @@ export const GameShell: React.FC<GameShellProps> = ({ game, onExit, onReward }) 
 
       {/* Controller Guide Overlay - Crystal Minimal Style */}
       <div className="mt-10 flex justify-center">
-         <div className="glass-panel px-12 py-4 rounded-3xl border border-white/5 flex gap-16 backdrop-blur-3xl shadow-2xl">
-            <div className="flex items-center gap-4">
-              <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">W</span>
-              <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">A</span>
-              <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">S</span>
-              <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">D</span>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Movimiento</span>
-            </div>
-            <div className="w-[1px] h-10 bg-white/10" />
-            <div className="flex items-center gap-4">
-              <span className="px-6 py-2 bg-white/10 rounded-xl font-orbitron font-black text-sm text-white">SPACE</span>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Acción de Apuesta</span>
-            </div>
-            <div className="w-[1px] h-10 bg-white/10" />
-            <div className="flex items-center gap-4">
-              <span className="px-4 py-2 bg-white/10 rounded-xl font-orbitron font-black text-sm text-white">ESC</span>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Panel de Pausa</span>
-            </div>
-         </div>
+        <div className="glass-panel px-12 py-4 rounded-3xl border border-white/5 flex gap-16 backdrop-blur-3xl shadow-2xl">
+          <div className="flex items-center gap-4">
+            <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">W</span>
+            <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">A</span>
+            <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">S</span>
+            <span className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-orbitron font-black text-sm text-white">D</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Movimiento</span>
+          </div>
+          <div className="w-[1px] h-10 bg-white/10" />
+          <div className="flex items-center gap-4">
+            <span className="px-6 py-2 bg-white/10 rounded-xl font-orbitron font-black text-sm text-white">SPACE</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Acción de Apuesta</span>
+          </div>
+          <div className="w-[1px] h-10 bg-white/10" />
+          <div className="flex items-center gap-4">
+            <span className="px-4 py-2 bg-white/10 rounded-xl font-orbitron font-black text-sm text-white">ESC</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Panel de Pausa</span>
+          </div>
+        </div>
       </div>
     </div>
   );
