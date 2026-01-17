@@ -40,7 +40,8 @@ const SPA_ROUTES = [
 
 export interface Env {
   DB: D1Database
-  ASSETS: KVNamespace
+  ASSETS?: KVNamespace
+  __STATIC_CONTENT?: KVNamespace
   SUPABASE_URL: string
   SUPABASE_KEY: string
   DATABASE_URL: string
@@ -104,7 +105,7 @@ function createServices(env: Env) {
     paypal,
     mistral,
     db: env.DB,
-    assets: env.ASSETS,
+    assets: env.ASSETS || env.__STATIC_CONTENT,
     turnstileSecret: env.TURNSTILE_SECRET_KEY || TURNSTILE_SECRET_KEY,
     whatsappApiKey: env.WHATSAPP_API_KEY,
     whatsappApiUrl: env.WHATSAPP_API_URL,
@@ -253,6 +254,7 @@ export default {
       }
 
       const url = new URL(request.url)
+      const assetNamespace = env.ASSETS || env.__STATIC_CONTENT
       
       // Handle API requests
       if (url.pathname.startsWith('/api')) {
@@ -261,9 +263,13 @@ export default {
 
       // Serve static assets
       try {
+        if (!assetNamespace) {
+          throw new Error('Assets namespace is not configured')
+        }
+
         const page = await getAssetFromKV(request, {
           ASSET_MANIFEST: assetManifest,
-          ASSET_NAMESPACE: env.ASSETS,
+          ASSET_NAMESPACE: assetNamespace,
         })
 
         const response = new Response(page.body, page)
@@ -295,7 +301,7 @@ export default {
               indexRequest,
               {
                 ASSET_MANIFEST: assetManifest,
-                ASSET_NAMESPACE: env.ASSETS,
+                ASSET_NAMESPACE: assetNamespace,
               }
             );
 
