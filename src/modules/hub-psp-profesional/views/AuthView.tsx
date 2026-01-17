@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Lock, UserPlus, LogIn } from 'lucide-react';
 import type { Session } from '../core/LocalAuth';
 import * as LocalAuth from '../core/LocalAuth';
@@ -22,6 +22,15 @@ export function AuthView({ onAuthenticated }: { onAuthenticated: (s: Session) =>
       setError(e?.message ?? 'Error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const enterAsGuest = () => {
+    try {
+      setError(null);
+      onAuthenticated(LocalAuth.createGuestSession());
+    } catch (e: any) {
+      setError(e?.message ?? 'Error');
     }
   };
 
@@ -76,6 +85,13 @@ export function AuthView({ onAuthenticated }: { onAuthenticated: (s: Session) =>
               className="w-full py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all"
             >
               {mode === 'login' ? 'Crear cuenta' : 'Ya tengo cuenta'}
+            </button>
+
+            <button
+              onClick={enterAsGuest}
+              className="w-full py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all"
+            >
+              Entrar como invitado
             </button>
 
             <div className="text-[10px] text-slate-500 font-black uppercase tracking-[0.35em] text-center">

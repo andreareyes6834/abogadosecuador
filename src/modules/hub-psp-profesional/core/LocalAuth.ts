@@ -134,3 +134,11 @@ export function logout(): void {
 export function readSession(): Session | null {
   return getSession();
 }
+
+export function createGuestSession(username?: string): Session {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const clean = (username ?? `invitado_${suffix}`).trim() || `invitado_${suffix}`;
+  const session = { username: clean };
+  setSession(session);
+  return session;
+}

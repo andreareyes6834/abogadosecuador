@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Play, ShoppingCart, Menu, X, User, ChevronLeft, Star, Lock } from 'lucide-react';
+import HubPspGameShell, { isHubPspPlayableGameId } from '../components/Games/HubPspGameShell';
 
-type Vista = 'hub' | 'juego' | 'tienda' | 'personaje' | 'planes' | 'accesorios' | 'habilidades';
+type Vista = 'hub' | 'juego' | 'hubPspGame' | 'tienda' | 'personaje' | 'planes' | 'accesorios' | 'habilidades';
 
 interface Juego {
   id: string;
@@ -57,6 +58,8 @@ const JUEGOS: Juego[] = [
   { id: 'solitario', nombre: 'Solitario Legal', icono: '🎴', categoria: 'cartas', dificultad: 'media', precio: 8, recompensa: 40, niveles: 30, descripcion: 'Solitario clásico con variantes legales', desbloqueado: true },
   { id: 'candy', nombre: 'Candy Crush Legal', icono: '🍬', categoria: 'puzzle', dificultad: 'media', precio: 12, recompensa: 55, niveles: 40, descripcion: 'Combina caramelos legales con poder-ups', desbloqueado: true },
   { id: 'ajedrez', nombre: 'Ajedrez Legal', icono: '♟️', categoria: 'estrategia', dificultad: 'difícil', precio: 20, recompensa: 80, niveles: 15, descripcion: 'Ajedrez estratégico profesional con IA', desbloqueado: true },
+  { id: 'tictactoe', nombre: 'Tres en Raya', icono: '⭕', categoria: 'puzzle', dificultad: 'fácil', precio: 0, recompensa: 35, niveles: 10, descripcion: 'Tres en raya clásico, jugable en tiempo real', desbloqueado: true },
+  { id: 'connect4', nombre: 'Conecta 4', icono: '🟡', categoria: 'puzzle', dificultad: 'fácil', precio: 0, recompensa: 35, niveles: 10, descripcion: 'Conecta 4 clásico, jugable en tiempo real', desbloqueado: true },
   { id: 'tetris', nombre: 'Tetris Legal', icono: '⬜', categoria: 'puzzle', dificultad: 'media', precio: 12, recompensa: 55, niveles: 30, descripcion: 'Tetris profesional con lógica avanzada y obstáculos', desbloqueado: true },
   { id: 'carros', nombre: 'Carros Legales', icono: '🏎️', categoria: 'arcade', dificultad: 'media', precio: 15, recompensa: 65, niveles: 25, descripcion: 'Carreras de carros con física realista', desbloqueado: true },
   { id: 'peleas', nombre: 'Peleas Legales', icono: '🥊', categoria: 'arcade', dificultad: 'difícil', precio: 18, recompensa: 75, niveles: 20, descripcion: 'Combates de boxeo profesional con combos', desbloqueado: true },
@@ -73,7 +76,7 @@ const JUEGOS: Juego[] = [
   { id: 'ruleta', nombre: 'Ruleta Legal', icono: '🎡', categoria: 'cartas', dificultad: 'media', precio: 18, recompensa: 85, niveles: 20, descripcion: 'Ruleta profesional con apuestas', desbloqueado: true },
   { id: 'cartas', nombre: 'Cartas Avanzado', icono: '🃏', categoria: 'cartas', dificultad: 'difícil', precio: 20, recompensa: 90, niveles: 25, descripcion: 'Juego de cartas avanzado con estrategia', desbloqueado: true },
   { id: 'naves', nombre: 'Space Invaders', icono: '👾', categoria: 'arcade', dificultad: 'media', precio: 15, recompensa: 75, niveles: 20, descripcion: 'Clásico Space Invaders con muchos niveles', desbloqueado: true },
-  { id: 'snake', nombre: 'Snake Profesional', icono: '🐍', categoria: 'arcade', dificultad: 'media', precio: 10, recompensa: 60, niveles: 30, descripcion: 'Snake clásico con 30 niveles y dificultad progresiva', desbloqueado: true },
+  { id: 'snake-pro', nombre: 'Snake Profesional', icono: '🐍', categoria: 'arcade', dificultad: 'media', precio: 10, recompensa: 60, niveles: 30, descripcion: 'Snake clásico con 30 niveles y dificultad progresiva', desbloqueado: true },
   { id: 'breakout', nombre: 'Breakout', icono: '🧱', categoria: 'arcade', dificultad: 'media', precio: 12, recompensa: 65, niveles: 25, descripcion: 'Breakout clásico rompe bloques con física realista', desbloqueado: true },
   { id: 'ladrillos', nombre: 'Brick Breaker Pro', icono: '🎯', categoria: 'arcade', dificultad: 'media', precio: 14, recompensa: 80, niveles: 30, descripcion: 'Rompe ladrillos con rebote realista, 30 niveles progresivos', desbloqueado: true },
   { id: 'pong', nombre: 'Pong Profesional', icono: '🏓', categoria: 'arcade', dificultad: 'media', precio: 13, recompensa: 75, niveles: 25, descripcion: 'Pong clásico contra IA inteligente con 25 niveles', desbloqueado: true },
@@ -139,6 +142,7 @@ const GamesPlatform: React.FC = () => {
   const [tokens, setTokens] = useState(1000);
   const [nivel, setNivel] = useState(5);
   const [juegoSeleccionado, setJuegoSeleccionado] = useState<Juego | null>(null);
+  const [hubPspGameId, setHubPspGameId] = useState<string | null>(null);
   const [nivelActual, setNivelActual] = useState(1);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [personajeSeleccionado, setPersonajeSeleccionado] = useState('abogado');
@@ -150,6 +154,13 @@ const GamesPlatform: React.FC = () => {
     document.title = 'Plataforma de Juegos - Abogados OS';
   }, []);
 
+  const mapToHubPspGameId = (id: string): string | null => {
+    if (isHubPspPlayableGameId(id)) return id;
+    if (id === 'snake-pro') return 'snake';
+    if (id === 'memoria') return 'memory';
+    return null;
+  };
+
   const jugarJuego = (juego: Juego) => {
     if (!juegosDesbloqueados.has(juego.id) && tokens < juego.precio) {
       alert('No tienes suficientes tokens para desbloquear este juego');
@@ -159,6 +170,15 @@ const GamesPlatform: React.FC = () => {
       setJuegosDesbloqueados(new Set([...juegosDesbloqueados, juego.id]));
       setTokens(tokens - juego.precio);
     }
+
+    const maybeHubPsp = mapToHubPspGameId(juego.id);
+    if (maybeHubPsp) {
+      setJuegoSeleccionado(juego);
+      setHubPspGameId(maybeHubPsp);
+      setVistaActual('hubPspGame');
+      return;
+    }
+
     setJuegoSeleccionado(juego);
     setNivelActual(1);
     setVistaActual('juego');
@@ -173,14 +193,6 @@ const GamesPlatform: React.FC = () => {
       const recompensaFinal = juegoSeleccionado.recompensa * 2;
       setTokens(tokens + recompensaFinal);
       setNivel(nivel + 1);
-      setVistaActual('hub');
-    }
-  };
-
-  const perderNivel = () => {
-    if (nivelActual > 1) {
-      setNivelActual(nivelActual - 1);
-    } else {
       setVistaActual('hub');
     }
   };
@@ -721,6 +733,20 @@ const GamesPlatform: React.FC = () => {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {vistaActual === 'hubPspGame' && hubPspGameId && (
+          <HubPspGameShell
+            gameId={hubPspGameId}
+            onExit={() => {
+              setHubPspGameId(null);
+              setVistaActual('hub');
+            }}
+            onReward={(coins) => {
+              const earned = Number.isFinite(coins) ? Math.max(0, Math.floor(coins)) : 0;
+              setTokens((t) => t + earned);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
