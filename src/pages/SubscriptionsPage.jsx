@@ -22,57 +22,54 @@ const SubscriptionsPage = () => {
   const plans = [
     {
       id: 'basic',
-      name: 'Plan Básico',
+      name: 'Normal',
       icon: FaShieldAlt,
       color: 'blue',
       priceMonthly: 29.99,
       priceAnnual: 299.99,
       description: 'Perfecto para emprendedores',
       features: [
-        '5 Consultas Legales/mes',
-        'Biblioteca de Documentos',
-        'Chat Soporte 24/7',
-        'Descuento 10%',
-        'Actualizaciones Semanales'
+        'Consultas Básicas del Consejo de la Judicatura',
+        'Consultas de servicios del SRI',
+        'Sesiones básicas de asesoría legal (2 por mes)',
+        'Acceso al Blog Legal con artículos actualizados',
+        'Notificaciones de actualizaciones legales'
       ]
     },
     {
       id: 'professional',
-      name: 'Plan Profesional',
+      name: 'Intermedio',
       icon: FaRocket,
       color: 'purple',
-      priceMonthly: 79.99,
-      priceAnnual: 799.99,
+      priceMonthly: 49.99,
+      priceAnnual: 499.99,
       description: 'Ideal para profesionales',
       features: [
-        '20 Consultas Legales/mes',
-        'Biblioteca Completa',
-        'Soporte Prioritario',
-        'Descuento 25%',
-        'Actualizaciones Diarias',
-        'Webinars Exclusivos',
-        'Revisión de Contratos'
+        'Consultas de causas penales y civiles',
+        'Consultas de multas de tránsito',
+        'Sesiones avanzadas de asesoría legal (4 por mes)',
+        'Acceso a cursos y eBooks legales premium',
+        'Descuentos en servicios adicionales',
+        'Acceso al Blog Legal con contenido exclusivo'
       ],
       popular: true
     },
     {
       id: 'enterprise',
-      name: 'Plan Empresarial',
+      name: 'Premium',
       icon: FaCrown,
       color: 'yellow',
-      priceMonthly: 199.99,
-      priceAnnual: 1999.99,
+      priceMonthly: 99.99,
+      priceAnnual: 999.99,
       description: 'Solución para empresas',
       features: [
-        'Consultas Ilimitadas',
-        'Biblioteca Premium',
-        'Gestor Dedicado',
-        'Descuento 40%',
-        'Alertas Personalizadas',
-        'Webinars Privados',
-        'Contratos Ilimitados',
-        'Asesoría Fiscal',
-        'Capacitación Equipo'
+        'Acceso ilimitado a todas las consultas disponibles',
+        'Sesiones premium de asesoría legal (8 por mes)',
+        'Acceso completo a biblioteca de cursos y eBooks',
+        'NFTs y servicios Blockchain exclusivos',
+        'Redacción ilimitada de certificados y documentos',
+        'Prioridad en atención al cliente 24/7',
+        'Acceso VIP al Blog Legal'
       ]
     }
   ];
@@ -136,9 +133,8 @@ const SubscriptionsPage = () => {
                 className="relative inline-flex h-8 w-14 items-center rounded-full bg-blue-600 transition-colors"
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-1'
+                    }`}
                 />
               </button>
               <span className={`text-lg ${billingCycle === 'annual' ? 'font-bold text-blue-600' : 'text-gray-600'}`}>
@@ -162,9 +158,8 @@ const SubscriptionsPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`relative bg-white rounded-2xl shadow-xl p-8 ${
-                    plan.popular ? 'ring-4 ring-purple-500 transform scale-105' : ''
-                  }`}
+                  className={`relative bg-white rounded-2xl shadow-xl p-8 ${plan.popular ? 'ring-4 ring-purple-500 transform scale-105' : ''
+                    }`}
                 >
                   {plan.popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -207,11 +202,10 @@ const SubscriptionsPage = () => {
 
                   <button
                     onClick={() => handleSubscribe(plan)}
-                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
-                      plan.popular
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${plan.popular
                         ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     Seleccionar Plan
                   </button>
