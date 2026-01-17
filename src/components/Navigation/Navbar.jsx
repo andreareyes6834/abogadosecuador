@@ -134,7 +134,7 @@ function Navbar() {
                   </div>
                 </Link>
 
-                <div className="hidden sm:flex sm:space-x-0 md:space-x-0.5 lg:space-x-1">
+                <div className="hidden sm:flex sm:space-x-0 md:space-x-0 lg:space-x-0.5">
                   {allNavigation.map((item) =>
                     item.hasSubmenu ? (
                       <Popover className="relative" key={item.name}>
