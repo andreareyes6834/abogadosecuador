@@ -45,6 +45,7 @@ const AbogadosOSPage = lazy(() => import('./pages/AbogadosOSPage'));
 const GamesPlatform = lazy(() => import('./pages/GamesPlatform'));
 const CryptoBankingModule = lazy(() => import('./modules/crypto-banking/App'));
 const ProyectosHub = lazy(() => import('./pages/ProyectosHub'));
+const HubPspPage = lazy(() => import('./pages/HubPspPage'));
 
 // Política de privacidad y términos
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
@@ -230,6 +231,8 @@ function AppContent() {
   const authContext = useAuth() || {};
   const { user, isAuthenticated = false, loading = false } = authContext;
   const location = useLocation();
+
+  const isHubPspRoute = location.pathname.startsWith('/hub-psp');
   
   // Obtener el contexto de módulos
   const { preloadCriticalModules, isLoading: modulesLoading } = useModules();
@@ -252,8 +255,8 @@ function AppContent() {
 
   return (
     <>
-      <Navbar />
-      <FloatingCart />
+      {!isHubPspRoute && <Navbar />}
+      {!isHubPspRoute && <FloatingCart />}
       
       <main className="flex-grow">
         <Routes>
@@ -423,6 +426,7 @@ function AppContent() {
           
           {/* Hub de Proyectos */}
           <Route path="/proyectos" element={<Suspense fallback={<LoadingIndicator />}><ProyectosHub /></Suspense>} />
+          <Route path="/hub-psp/*" element={<Suspense fallback={<LoadingIndicator />}><HubPspPage /></Suspense>} />
           
           {/* Módulos integrados */}
           <Route path="/abogados-os" element={<Suspense fallback={<LoadingIndicator />}><AbogadosOSPage /></Suspense>} />
@@ -455,10 +459,10 @@ function AppContent() {
         </Routes>
       </main>
       
-      <Footer />
-      <CookieConsent />
-      <WhatsAppChat />
-      <AILegalChatbot />
+      {!isHubPspRoute && <Footer />}
+      {!isHubPspRoute && <CookieConsent />}
+      {!isHubPspRoute && <WhatsAppChat />}
+      {!isHubPspRoute && <AILegalChatbot />}
     </>
   );
 }

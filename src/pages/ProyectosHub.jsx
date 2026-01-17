@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Scale, Gamepad2, TrendingUp, ArrowRight } from 'lucide-react';
+import { Scale, Gamepad2, TrendingUp, ArrowRight, Layers } from 'lucide-react';
 
 export default function ProyectosHub() {
   const proyectos = [
@@ -38,6 +38,18 @@ export default function ProyectosHub() {
       borderColor: 'border-cyan-500',
       features: ['Exchange 24/7', 'Wallet Seguro', 'P2P Trading', 'Staking & Rewards'],
       ruta: '/cripto',
+      estado: 'Activo'
+    },
+    {
+      id: 'hub-psp',
+      nombre: 'Hub PSP Professional',
+      descripcion: 'Hub profesional integrado con economía, progreso y centro de juegos',
+      icono: <Layers className="w-16 h-16" />,
+      color: 'from-slate-800 to-slate-900',
+      textColor: 'text-slate-800',
+      borderColor: 'border-slate-700',
+      features: ['Centro de juegos', 'Economía (coins/gems)', 'Perfil y progreso', 'Tienda integrada'],
+      ruta: '/hub-psp',
       estado: 'Activo'
     }
   ];
