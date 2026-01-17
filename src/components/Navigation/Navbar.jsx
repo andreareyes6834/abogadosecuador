@@ -83,19 +83,19 @@ function Navbar() {
 
   const updatedNavigation = mainNavigation.map(item => ({
     ...item,
-    current: location.pathname === item.href || 
-             (item.href !== '#' && item.href !== '/' && location.pathname.includes(item.href))
+    current: location.pathname === item.href ||
+      (item.href !== '#' && item.href !== '/' && location.pathname.includes(item.href))
   }));
 
   // Añadir entradas para Políticas y Seguridad
-  const allNavigation = [...updatedNavigation, 
-    { 
-      name: 'Políticas', 
-      href: '#', 
-      current: location.pathname === '/privacidad' || location.pathname === '/terminos' || location.pathname === '/seguridad', 
-      hasSubmenu: true, 
-      icon: <FaShieldAlt className="text-blue-600" /> 
-    }
+  const allNavigation = [...updatedNavigation,
+  {
+    name: 'Políticas',
+    href: '#',
+    current: location.pathname === '/privacidad' || location.pathname === '/terminos' || location.pathname === '/seguridad',
+    hasSubmenu: true,
+    icon: <FaShieldAlt className="text-blue-600" />
+  }
   ];
 
   return (
@@ -133,9 +133,9 @@ function Navbar() {
                     </div>
                   </div>
                 </Link>
-                
+
                 <div className="hidden sm:flex sm:space-x-0 md:space-x-0.5 lg:space-x-1">
-                  {allNavigation.map((item) => 
+                  {allNavigation.map((item) =>
                     item.hasSubmenu ? (
                       <Popover className="relative" key={item.name}>
                         {({ open }) => (
@@ -148,7 +148,7 @@ function Navbar() {
                             >
                               <span className="mr-1">{item.icon}</span>
                               <span>{item.name}</span>
-                              <ChevronDownIcon 
+                              <ChevronDownIcon
                                 className={classNames(
                                   'ml-1 h-4 w-4 transition-transform',
                                   open ? 'rotate-180 transform' : ''
@@ -165,27 +165,27 @@ function Navbar() {
                               leaveFrom="opacity-100 translate-y-0"
                               leaveTo="opacity-0 translate-y-1"
                             >
-                              <Popover.Panel className="absolute left-1/2 z-50 mt-1 w-56 -translate-x-1/2 transform">
+                              <Popover.Panel className={`absolute z-50 mt-1 w-56 transform ${item.name === 'Políticas' ? 'right-0' : 'left-1/2 -translate-x-1/2'}`}>
                                 <div className="rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 overflow-hidden">
                                   <div className="relative grid gap-1 p-2">
-                                    {(item.name === 'Servicios' ? serviceSubmenu : 
-                                      item.name === 'Consultas' ? consultasSubmenu : 
-                                      item.name === 'Blog' ? blogSubmenu :
-                                      item.name === 'Comunidad' ? comunidadSubmenu :
-                                      item.name === 'Proyectos' ? proyectosSubmenu :
-                                      item.name === 'Políticas' ? policySubmenu : []).map((subItem) => (
-                                      <Link
-                                        key={subItem.name}
-                                        to={subItem.href}
-                                        className={classNames(
-                                          subItem.current ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700',
-                                          'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors'
-                                        )}
-                                      >
-                                        <span className="mr-2">{subItem.icon}</span>
-                                        <span>{subItem.name}</span>
-                                      </Link>
-                                    ))}
+                                    {(item.name === 'Servicios' ? serviceSubmenu :
+                                      item.name === 'Consultas' ? consultasSubmenu :
+                                        item.name === 'Blog' ? blogSubmenu :
+                                          item.name === 'Comunidad' ? comunidadSubmenu :
+                                            item.name === 'Proyectos' ? proyectosSubmenu :
+                                              item.name === 'Políticas' ? policySubmenu : []).map((subItem) => (
+                                                <Link
+                                                  key={subItem.name}
+                                                  to={subItem.href}
+                                                  className={classNames(
+                                                    subItem.current ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700',
+                                                    'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors'
+                                                  )}
+                                                >
+                                                  <span className="mr-2">{subItem.icon}</span>
+                                                  <span>{subItem.name}</span>
+                                                </Link>
+                                              ))}
                                   </div>
                                 </div>
                               </Popover.Panel>
@@ -214,14 +214,14 @@ function Navbar() {
               <div className="absolute inset-y-0 right-0 flex items-center gap-2 sm:static">
                 {/* Botones de contacto - Solo desktop grande */}
                 <div className="hidden xl:flex items-center gap-1">
-                  <a 
+                  <a
                     href="tel:+593988835269"
                     className="inline-flex items-center px-2 py-1.5 text-[11px] font-semibold rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
                   >
                     <FaPhone className="mr-1 text-xs" /> Llamar
                   </a>
-                  <Link 
-                    to="/contacto" 
+                  <Link
+                    to="/contacto"
                     className="inline-flex items-center px-2 py-1.5 text-[11px] font-semibold rounded-md text-white bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 shadow-sm transition-all"
                   >
                     <FaEnvelope className="mr-1 text-xs" /> Consulta
@@ -241,7 +241,7 @@ function Navbar() {
                     </span>
                   )}
                 </Link>
-                
+
                 {/* Auth buttons */}
                 {isAuthenticated ? (
                   <Menu as="div" className="relative ml-3">
@@ -337,21 +337,21 @@ function Navbar() {
                           />
                         </Disclosure.Button>
                         <Disclosure.Panel className="mt-1 space-y-1">
-                          {(item.name === 'Servicios' ? serviceSubmenu : 
-                            item.name === 'Consultas' ? consultasSubmenu : 
-                            item.name === 'Blog' ? blogSubmenu :
-                            item.name === 'Comunidad' ? comunidadSubmenu :
-                            item.name === 'Proyectos' ? proyectosSubmenu :
-                            item.name === 'Políticas' ? policySubmenu : []).map((subItem) => (
-                            <Link
-                              key={subItem.name}
-                              to={subItem.href}
-                              className="group flex items-center rounded-md py-2 pl-4 pr-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700"
-                            >
-                              <span className="mr-2">{subItem.icon}</span>
-                              <span>{subItem.name}</span>
-                            </Link>
-                          ))}
+                          {(item.name === 'Servicios' ? serviceSubmenu :
+                            item.name === 'Consultas' ? consultasSubmenu :
+                              item.name === 'Blog' ? blogSubmenu :
+                                item.name === 'Comunidad' ? comunidadSubmenu :
+                                  item.name === 'Proyectos' ? proyectosSubmenu :
+                                    item.name === 'Políticas' ? policySubmenu : []).map((subItem) => (
+                                      <Link
+                                        key={subItem.name}
+                                        to={subItem.href}
+                                        className="group flex items-center rounded-md py-2 pl-4 pr-2 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+                                      >
+                                        <span className="mr-2">{subItem.icon}</span>
+                                        <span>{subItem.name}</span>
+                                      </Link>
+                                    ))}
                         </Disclosure.Panel>
                       </>
                     )}
@@ -370,34 +370,34 @@ function Navbar() {
                   </Link>
                 )
               )}
-              
+
               {/* Mobile Contact Action Buttons */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contacto Directo</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <a 
-                    href="tel:+593988835269" 
+                  <a
+                    href="tel:+593988835269"
                     className="flex items-center justify-center p-2 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
                   >
                     <FaPhone className="mr-1" /> Llamar
                   </a>
-                  <a 
-                    href="https://wa.me/593988835269" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                  <a
+                    href="https://wa.me/593988835269"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center justify-center p-2 border border-transparent text-xs font-medium rounded-md text-white bg-green-500 hover:bg-green-600"
                   >
                     <FaWhatsapp className="mr-1" /> WhatsApp
                   </a>
-                  <Link 
-                    to="/contacto" 
+                  <Link
+                    to="/contacto"
                     className="flex items-center justify-center p-2 border border-transparent text-xs font-medium rounded-md text-gray-900 bg-yellow-400 hover:bg-yellow-500 col-span-2 mt-1"
                   >
                     <FaEnvelope className="mr-1" /> Consulta Gratis
                   </Link>
                 </div>
               </div>
-              
+
               {/* Mobile Authentication Buttons */}
               {!isAuthenticated && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -418,7 +418,7 @@ function Navbar() {
                   </div>
                 </div>
               )}
-              
+
               {/* Theme Switcher for mobile */}
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tema</h3>
