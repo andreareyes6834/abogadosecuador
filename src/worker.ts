@@ -1,5 +1,4 @@
 /// <reference path="./cloudflare.d.ts" />
-import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
 import { handleAuthRoutes } from './routes/auth'
 import { handleDocumentRoutes } from './routes/documents'
 import { handleContactRoutes } from './routes/contacto'
@@ -7,8 +6,6 @@ import { handleAppointmentRoutes } from './routes/appointments.js'
 import { handleWhatsAppRoutes } from './worker-api/whatsapp-routes'
 import { handleAutomationRoutes } from './worker-api/automation-routes'
 import { createSupabaseClient, createPrismaClient, createNotionClient, createOpenAIClient, createPayPalClient, createMistralClient } from './shims'
-import manifestJSON from '__STATIC_CONTENT_MANIFEST'
-const assetManifest = JSON.parse(manifestJSON)
 
 // Valores por defecto para servicios esenciales (útiles para desarrollo local)
 const DEFAULT_SUPABASE_URL = '';
@@ -40,8 +37,7 @@ const SPA_ROUTES = [
 
 export interface Env {
   DB: D1Database
-  ASSETS?: KVNamespace
-  __STATIC_CONTENT?: KVNamespace
+  ASSETS: Fetcher
   SUPABASE_URL: string
   SUPABASE_KEY: string
   DATABASE_URL: string
@@ -105,7 +101,7 @@ function createServices(env: Env) {
     paypal,
     mistral,
     db: env.DB,
-    assets: env.ASSETS || env.__STATIC_CONTENT,
+    assets: env.ASSETS,
     turnstileSecret: env.TURNSTILE_SECRET_KEY || TURNSTILE_SECRET_KEY,
     whatsappApiKey: env.WHATSAPP_API_KEY,
     whatsappApiUrl: env.WHATSAPP_API_URL,
@@ -254,7 +250,6 @@ export default {
       }
 
       const url = new URL(request.url)
-      const assetNamespace = env.ASSETS || env.__STATIC_CONTENT
       
       // Handle API requests
       if (url.pathname.startsWith('/api')) {
@@ -263,71 +258,56 @@ export default {
 
       // Serve static assets
       try {
-        if (!assetNamespace) {
-          throw new Error('Assets namespace is not configured')
+        const assetResponse = await env.ASSETS.fetch(request)
+
+        // If asset exists, return it with security headers.
+        if (assetResponse.status !== 404) {
+          const response = new Response(assetResponse.body, assetResponse)
+          response.headers.set('X-XSS-Protection', '1; mode=block')
+          Object.entries(securityHeaders).forEach(([key, value]) => {
+            response.headers.set(key, value)
+          })
+          return response
         }
-
-        const page = await getAssetFromKV(request, {
-          ASSET_MANIFEST: assetManifest,
-          ASSET_NAMESPACE: assetNamespace,
-        })
-
-        const response = new Response(page.body, page)
-        response.headers.set('X-XSS-Protection', '1; mode=block')
-        Object.entries(securityHeaders).forEach(([key, value]) => {
-          response.headers.set(key, value)
-        })
-
-        return response
       } catch (e) {
-        // Si no se encuentra el recurso, devolver index.html para rutas SPA
-        try {
-          // Verificar si la ruta actual debe ser manejada por React Router
-          const { pathname } = new URL(request.url);
-          const isSpaRoute = SPA_ROUTES.some(route => 
-            pathname === route || pathname.startsWith(`${route}/`)
-          );
-          
-          // También considerar rutas sin extensión que no son /api/
-          const hasExtension = /\.\w+$/.test(pathname);
-          const shouldServeIndexHtml = isSpaRoute || (!hasExtension && pathname !== '/');
-          
-          // Si es una ruta SPA, servir index.html
-          if (shouldServeIndexHtml) {
-            console.log(`Sirviendo index.html para ruta SPA: ${pathname}`);
-            const indexRequest = new Request(new URL('/index.html', request.url).toString(), request);
-            
-            const notFoundResponse = await getAssetFromKV(
-              indexRequest,
-              {
-                ASSET_MANIFEST: assetManifest,
-                ASSET_NAMESPACE: assetNamespace,
-              }
-            );
-
-            const response = new Response(notFoundResponse.body, {
-              ...notFoundResponse,
-              status: 200, // Devolvemos 200 para SPA routing
-            });
-
-            Object.entries(securityHeaders).forEach(([key, value]) => {
-              response.headers.set(key, value)
-            });
-
-            return response;
-          }
-        } catch (indexError) {
-          return new Response('Página no encontrada', { 
-            status: 404,
-            headers: securityHeaders
-          });
-        }
-
-        return new Response('Página no encontrada', {
-          status: 404,
-          headers: securityHeaders
-        });
+        // Continue to SPA fallback below
       }
+
+      // Si no se encuentra el recurso, devolver index.html para rutas SPA
+      try {
+        const { pathname } = new URL(request.url);
+        const isSpaRoute = SPA_ROUTES.some(route =>
+          pathname === route || pathname.startsWith(`${route}/`)
+        );
+
+        const hasExtension = /\.\w+$/.test(pathname);
+        const shouldServeIndexHtml = isSpaRoute || (!hasExtension && pathname !== '/');
+
+        if (shouldServeIndexHtml) {
+          const indexUrl = new URL('/index.html', request.url).toString();
+          const indexRequest = new Request(indexUrl, request);
+          const indexResponse = await env.ASSETS.fetch(indexRequest);
+
+          const response = new Response(indexResponse.body, {
+            status: 200,
+            headers: indexResponse.headers,
+          });
+
+          response.headers.set('X-XSS-Protection', '1; mode=block')
+          Object.entries(securityHeaders).forEach(([key, value]) => {
+            response.headers.set(key, value)
+          });
+
+          return response;
+        }
+      } catch (_indexError) {
+        // fallthrough to 404
+      }
+
+      return new Response('Página no encontrada', {
+        status: 404,
+        headers: securityHeaders
+      });
     } catch (error) {
       console.error('Worker Error:', error)
       return new Response('Error interno del servidor', {
