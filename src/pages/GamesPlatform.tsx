@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gamepad2, Play, ShoppingCart, Menu, X, User, ChevronLeft, Star, Lock } from 'lucide-react';
 import HubPspGameShell, { isHubPspPlayableGameId } from '../components/Games/HubPspGameShell';
+import { platformEngine } from '../modules/hub-psp-profesional/core/PlatformEngine';
+import { saveUserState, loadUserState } from '../modules/hub-psp-profesional/core/PlatformPersistence';
 
 type Vista = 'hub' | 'juego' | 'hubPspGame' | 'tienda' | 'personaje' | 'planes' | 'accesorios' | 'habilidades';
 
@@ -139,17 +141,49 @@ const PLANES: Plan[] = [
 
 const GamesPlatform: React.FC = () => {
   const [vistaActual, setVistaActual] = useState<Vista>('hub');
-  const [tokens, setTokens] = useState(1000);
-  const [nivel, setNivel] = useState(5);
+  const [userId] = useState('guest-' + Math.random().toString(36).substr(2, 9));
+  const [tokens, setTokens] = useState(0);
+  const [nivel, setNivel] = useState(1);
   const [juegoSeleccionado, setJuegoSeleccionado] = useState<Juego | null>(null);
   const [hubPspGameId, setHubPspGameId] = useState<string | null>(null);
   const [nivelActual, setNivelActual] = useState(1);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [personajeSeleccionado, setPersonajeSeleccionado] = useState('abogado');
-  const [juegosDesbloqueados, setJuegosDesbloqueados] = useState(new Set(['trivia', 'memoria', 'sopa', 'ladrillos', 'naves', 'ajedrez', 'tetris']));
+  const [juegosDesbloqueados, setJuegosDesbloqueados] = useState(new Set<string>());
   const [accesoriosComprados, setAccesoriosComprados] = useState(new Set<string>());
   const [habilidadesCompradas, setHabilidadesCompradas] = useState(new Set<string>());
-  
+
+  // Inicializar PlatformEngine y cargar estado guardado
+  useEffect(() => {
+    const savedState = loadUserState(userId);
+    if (savedState) {
+      platformEngine.initUser(userId, {
+        coins: savedState.wallet.softTokens,
+        gems: savedState.wallet.hardTokens,
+        level: savedState.progress.level,
+        xp: savedState.progress.xp,
+        maxXp: savedState.progress.xpToNextLevel
+      });
+      setTokens(savedState.wallet.softTokens);
+      setNivel(savedState.progress.level);
+    } else {
+      platformEngine.initUser(userId, {
+        coins: 1000,
+        gems: 50,
+        level: 1,
+        xp: 0,
+        maxXp: 1000
+      });
+      setTokens(1000);
+    }
+
+    // Desbloquear automáticamente los 6 juiegos funcionales
+    setJuegosDesbloqueados(new Set([
+      'snake', 'pong', '2048', 'memory', 'tictactoe', 'connect4',
+      'trivia', 'poker', 'solitario', 'candy', 'blackjack'
+    ]));
+  }, [userId]);
+
   useEffect(() => {
     document.title = 'Plataforma de Juegos - Abogados OS';
   }, []);
@@ -162,16 +196,8 @@ const GamesPlatform: React.FC = () => {
   };
 
   const jugarJuego = (juego: Juego) => {
-    if (!juegosDesbloqueados.has(juego.id) && tokens < juego.precio) {
-      alert('No tienes suficientes tokens para desbloquear este juego');
-      return;
-    }
-    if (!juegosDesbloqueados.has(juego.id)) {
-      setJuegosDesbloqueados(new Set([...juegosDesbloqueados, juego.id]));
-      setTokens(tokens - juego.precio);
-    }
-
     const maybeHubPsp = mapToHubPspGameId(juego.id);
+
     if (maybeHubPsp) {
       setJuegoSeleccionado(juego);
       setHubPspGameId(maybeHubPsp);
@@ -185,14 +211,30 @@ const GamesPlatform: React.FC = () => {
   };
 
   const avanzarNivel = () => {
-    if (juegoSeleccionado && nivelActual < juegoSeleccionado.niveles) {
-      const recompensa = Math.floor(juegoSeleccionado.recompensa * (1 + nivelActual * 0.1));
-      setTokens(tokens + recompensa);
+    if (!juegoSeleccionado) return;
+
+    // Usar PlatformEngine para recompensar
+    const result = platformEngine.finishGame(userId, {
+      gameId: juegoSeleccionado.id,
+      score: 1000 * (nivelActual + 1),
+      difficulty: 'MEDIUM',
+      won: true
+    });
+
+    // Actualizar tokens desde el engine
+    setTokens(platformEngine.getCoins(userId));
+    setNivel(result.progress.level);
+
+    // Guardar estado
+    try {
+      saveUserState(userId, platformEngine.exportUserState(userId));
+    } catch (e) {
+      console.warn('Error guardando estado:', e);
+    }
+
+    if (nivelActual < juegoSeleccionado.niveles) {
       setNivelActual(nivelActual + 1);
-    } else if (juegoSeleccionado && nivelActual === juegoSeleccionado.niveles) {
-      const recompensaFinal = juegoSeleccionado.recompensa * 2;
-      setTokens(tokens + recompensaFinal);
-      setNivel(nivel + 1);
+    } else {
       setVistaActual('hub');
     }
   };
@@ -237,7 +279,7 @@ const GamesPlatform: React.FC = () => {
       {/* Header Profesional Mac-like Cristal */}
       <motion.header className="backdrop-blur-3xl bg-white/8 border-b border-white/10 sticky top-0 z-40 shadow-2xl shadow-black/20">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 flex justify-between items-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-4"
@@ -250,9 +292,9 @@ const GamesPlatform: React.FC = () => {
               <p className="text-xs text-slate-400">Centro de Entretenimiento Profesional</p>
             </div>
           </motion.div>
-          
+
           <div className="hidden md:flex items-center gap-6">
-            <motion.div 
+            <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
               className="backdrop-blur-3xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/20 rounded-xl px-5 py-3 shadow-lg"
@@ -260,7 +302,7 @@ const GamesPlatform: React.FC = () => {
               <p className="text-xs text-slate-300 font-semibold">TOKENS</p>
               <p className="text-3xl font-bold text-yellow-400">{tokens} 🪙</p>
             </motion.div>
-            <motion.div 
+            <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
               className="backdrop-blur-3xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-400/20 rounded-xl px-5 py-3 shadow-lg"
@@ -281,7 +323,7 @@ const GamesPlatform: React.FC = () => {
         {vistaActual === 'hub' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
             {/* Navegación Profesional */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-wrap gap-3 mb-8 p-4 backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl"
@@ -299,11 +341,10 @@ const GamesPlatform: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
                   onClick={() => setVistaActual(nav.id as Vista)}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${
-                    vistaActual === nav.id
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${vistaActual === nav.id
                       ? 'backdrop-blur-md bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-blue-500/50 border border-white/30'
                       : 'backdrop-blur-md bg-white/10 border border-white/10 text-slate-300 hover:bg-white/20 hover:border-white/30'
-                  }`}
+                    }`}
                 >
                   {nav.label}
                 </motion.button>
@@ -334,11 +375,10 @@ const GamesPlatform: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: i * 0.06, duration: 0.5 }}
                   whileHover={{ y: -10, scale: 1.03 }}
-                  className={`backdrop-blur-3xl border rounded-3xl p-7 transition-all group cursor-pointer ${
-                    juegosDesbloqueados.has(juego.id)
+                  className={`backdrop-blur-3xl border rounded-3xl p-7 transition-all group cursor-pointer ${juegosDesbloqueados.has(juego.id)
                       ? 'bg-gradient-to-br from-blue-500/15 via-purple-400/10 to-pink-500/15 border-white/10 shadow-2xl hover:shadow-blue-400/40'
                       : 'bg-gradient-to-br from-slate-500/10 via-slate-600/5 to-slate-700/10 border-white/5 shadow-lg hover:shadow-slate-400/30'
-                  }`}
+                    }`}
                   onClick={() => jugarJuego(juego)}
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -360,14 +400,13 @@ const GamesPlatform: React.FC = () => {
                       <span className="text-xs text-slate-400 font-semibold">COSTO</span>
                       <span className="text-yellow-400 font-bold text-xl">{juego.precio} 🪙</span>
                     </div>
-                    <motion.button 
+                    <motion.button
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
-                      className={`flex-1 px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-bold ${
-                        juegosDesbloqueados.has(juego.id)
+                      className={`flex-1 px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-bold ${juegosDesbloqueados.has(juego.id)
                           ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:shadow-lg hover:shadow-green-500/50'
                           : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg hover:shadow-blue-500/50'
-                      }`}
+                        }`}
                     >
                       <Play className="w-4 h-4" />
                       {juegosDesbloqueados.has(juego.id) ? 'Jugar' : 'Desbloquear'}
@@ -381,15 +420,15 @@ const GamesPlatform: React.FC = () => {
 
         {vistaActual === 'tienda' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-            <motion.button 
+            <motion.button
               whileHover={{ x: -5 }}
-              onClick={() => setVistaActual('hub')} 
+              onClick={() => setVistaActual('hub')}
               className="flex items-center gap-2 text-blue-400 mb-8 hover:text-blue-300 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
               Volver a Juegos
             </motion.button>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-bold text-white mb-8"
@@ -415,7 +454,7 @@ const GamesPlatform: React.FC = () => {
                   <p className="text-slate-300 mb-4 text-lg">Tokens</p>
                   <p className="text-3xl font-bold text-yellow-400 mb-4">${paquete.precio}</p>
                   {paquete.desc > 0 && <p className="text-green-400 text-sm mb-4 font-bold">💰 Ahorra {paquete.desc}%</p>}
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/50 transition-all font-bold"
@@ -430,15 +469,15 @@ const GamesPlatform: React.FC = () => {
 
         {vistaActual === 'planes' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-            <motion.button 
+            <motion.button
               whileHover={{ x: -5 }}
-              onClick={() => setVistaActual('hub')} 
+              onClick={() => setVistaActual('hub')}
               className="flex items-center gap-2 text-blue-400 mb-8 hover:text-blue-300 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
               Volver a Juegos
             </motion.button>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-bold text-white mb-8"
@@ -453,14 +492,13 @@ const GamesPlatform: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ y: -8, scale: 1.02 }}
-                  className={`backdrop-blur-3xl border rounded-3xl p-8 transition-all ${
-                    plan.destacado
+                  className={`backdrop-blur-3xl border rounded-3xl p-8 transition-all ${plan.destacado
                       ? 'bg-gradient-to-br from-yellow-500/15 via-orange-400/10 to-yellow-600/15 border-yellow-400/30 ring-2 ring-yellow-400/20 shadow-2xl shadow-yellow-500/20'
                       : 'bg-gradient-to-br from-blue-500/15 via-purple-400/10 to-blue-600/15 border-white/10 shadow-2xl'
-                  }`}
+                    }`}
                 >
                   {plan.destacado && (
-                    <motion.div 
+                    <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       className="text-yellow-400 text-sm font-bold mb-4 inline-block"
@@ -477,14 +515,13 @@ const GamesPlatform: React.FC = () => {
                       </li>
                     ))}
                   </ul>
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`w-full px-4 py-3 rounded-xl font-bold transition-all ${
-                      plan.destacado
+                    className={`w-full px-4 py-3 rounded-xl font-bold transition-all ${plan.destacado
                         ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-black hover:shadow-lg hover:shadow-yellow-500/50'
                         : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:shadow-lg hover:shadow-blue-500/50'
-                    }`}
+                      }`}
                   >
                     {plan.precio === 0 ? 'Plan Actual' : 'Suscribirse'}
                   </motion.button>
@@ -496,15 +533,15 @@ const GamesPlatform: React.FC = () => {
 
         {vistaActual === 'personaje' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-            <motion.button 
+            <motion.button
               whileHover={{ x: -5 }}
-              onClick={() => setVistaActual('hub')} 
+              onClick={() => setVistaActual('hub')}
               className="flex items-center gap-2 text-blue-400 mb-8 hover:text-blue-300 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
               Volver a Juegos
             </motion.button>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-bold text-white mb-8"
@@ -519,13 +556,12 @@ const GamesPlatform: React.FC = () => {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ y: -8, scale: 1.02 }}
-                  className={`backdrop-blur-3xl border rounded-3xl p-8 text-center transition-all ${
-                    personajeSeleccionado === personaje.id
+                  className={`backdrop-blur-3xl border rounded-3xl p-8 text-center transition-all ${personajeSeleccionado === personaje.id
                       ? 'bg-gradient-to-br from-yellow-500/15 via-orange-400/10 to-yellow-600/15 border-yellow-400/30 shadow-2xl shadow-yellow-500/20'
                       : 'bg-gradient-to-br from-blue-500/15 via-purple-400/10 to-blue-600/15 border-white/10 shadow-2xl'
-                  }`}
+                    }`}
                 >
-                  <motion.div 
+                  <motion.div
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="text-7xl mb-4"
@@ -535,7 +571,7 @@ const GamesPlatform: React.FC = () => {
                   <h3 className="text-2xl font-bold text-white mb-2">{personaje.nombre}</h3>
                   <p className="text-sm text-slate-300 mb-6">+{personaje.bonus}% Bonus en Recompensas</p>
                   {personajeSeleccionado === personaje.id ? (
-                    <motion.button 
+                    <motion.button
                       className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/50"
                     >
                       ✓ Seleccionado
@@ -558,15 +594,15 @@ const GamesPlatform: React.FC = () => {
 
         {vistaActual === 'accesorios' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-            <motion.button 
+            <motion.button
               whileHover={{ x: -5 }}
-              onClick={() => setVistaActual('hub')} 
+              onClick={() => setVistaActual('hub')}
               className="flex items-center gap-2 text-blue-400 mb-8 hover:text-blue-300 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
               Volver a Juegos
             </motion.button>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-bold text-white mb-8"
@@ -588,7 +624,7 @@ const GamesPlatform: React.FC = () => {
                   <p className="text-sm text-slate-300 mb-4">{accesorio.descripcion}</p>
                   <p className="text-sm text-slate-300 mb-4">Bonus: +{accesorio.bonus}%</p>
                   {accesoriosComprados.has(accesorio.id) ? (
-                    <motion.button 
+                    <motion.button
                       className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/50"
                     >
                       ✓ Poseído
@@ -611,15 +647,15 @@ const GamesPlatform: React.FC = () => {
 
         {vistaActual === 'habilidades' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-            <motion.button 
+            <motion.button
               whileHover={{ x: -5 }}
-              onClick={() => setVistaActual('hub')} 
+              onClick={() => setVistaActual('hub')}
               className="flex items-center gap-2 text-blue-400 mb-8 hover:text-blue-300 transition-all"
             >
               <ChevronLeft className="w-5 h-5" />
               Volver a Juegos
             </motion.button>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-4xl font-bold text-white mb-8"
@@ -640,7 +676,7 @@ const GamesPlatform: React.FC = () => {
                   <h3 className="text-2xl font-bold text-white mb-2">{habilidad.nombre}</h3>
                   <p className="text-sm text-slate-300 mb-4">{habilidad.efecto}</p>
                   {habilidadesCompradas.has(habilidad.id) ? (
-                    <motion.button 
+                    <motion.button
                       className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/50"
                     >
                       ✓ Adquirida
