@@ -27,6 +27,7 @@ export interface GameFinishOutput {
   progress: UserProgress;
 }
 
+// Platform Engine Core Class
 export class PlatformEngine {
   private listeners: (() => void)[] = [];
   private economy = new EconomyEngine();
